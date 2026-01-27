@@ -133,7 +133,8 @@ async def on_message(message: discord.Message):
         description=f"Seu IP foi liberado com sucesso.\nVoce ja pode conectar no servidor FiveM.\n\nCaso nao consiga acessar a cidade, entre no portal: {config.PORTAL_URL}",
         color=0x00FF00,
     )
-    embed.set_footer(text=f"Liberado por {message.author}")
+    embed.set_footer(text=f"Liberado por ElysiusRP")
+    embed.timestamp = message.created_at
     await message.reply(embed=embed)
 
     _log_webhook(
