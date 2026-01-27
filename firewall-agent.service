@@ -5,9 +5,9 @@ Wants=docker.service
 
 [Service]
 Type=simple
-WorkingDirectory=/home/joao/fx-server-elysius/base-script/services/whitelist-portal
-ExecStart=/usr/bin/python3 /home/joao/fx-server-elysius/base-script/services/whitelist-portal/firewall_agent.py
-EnvironmentFile=/home/joao/fx-server-elysius/base-script/services/whitelist-portal/.env
+WorkingDirectory=/root/shild-captive-portal
+ExecStart=/usr/bin/python3 /root/shild-captive-portal/firewall_agent.py
+EnvironmentFile=/root/shild-captive-portal/.env
 Restart=always
 RestartSec=5
 
