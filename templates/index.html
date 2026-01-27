@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elysius RP - Liberar Acesso</title>
+    {% if renew and recaptcha_key %}
+    <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_key }}"></script>
+    {% endif %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0f;
+            color: #e0d6c8;
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(139, 92, 42, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 50%, rgba(180, 140, 60, 0.06) 0%, transparent 50%);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 460px;
+            padding: 2.5rem;
+            margin: 1rem;
+            background: rgba(18, 18, 28, 0.95);
+            border: 1px solid rgba(180, 140, 60, 0.25);
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(180, 140, 60, 0.05);
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #c9a84c;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #8a7e6b;
+            margin-bottom: 2rem;
+        }
+
+        .code-box {
+            background: rgba(30, 30, 45, 0.8);
+            border: 2px solid rgba(180, 140, 60, 0.4);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .code-label {
+            font-size: 0.8rem;
+            color: #8a7e6b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.8rem;
+        }
+
+        .code {
+            font-size: 3rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            color: #f0d070;
+            letter-spacing: 12px;
+            text-shadow: 0 0 15px rgba(240, 208, 112, 0.3);
+        }
+
+        .timer {
+            font-size: 0.85rem;
+            color: #b08040;
+            margin-top: 0.8rem;
+        }
+
+        .timer.expired { color: #cc4444; }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            margin-top: 1rem;
+            background: linear-gradient(135deg, #b08830, #d4a840);
+            color: #1a1a2e;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(180, 140, 60, 0.3); }
+        .btn:active { transform: translateY(0); }
+
+        .btn.copied {
+            background: linear-gradient(135deg, #2d8a4e, #3aaf60);
+            color: #fff;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .instructions {
+            margin-top: 2rem;
+            text-align: left;
+            padding: 1.2rem;
+            background: rgba(20, 20, 30, 0.6);
+            border-radius: 8px;
+            border-left: 3px solid rgba(180, 140, 60, 0.4);
+        }
+
+        .instructions h3 {
+            font-size: 0.85rem;
+            color: #c9a84c;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .instructions ol {
+            padding-left: 1.2rem;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            color: #a89a85;
+        }
+
+        .instructions strong { color: #e0d6c8; }
+
+        .status-ok {
+            padding: 1.5rem;
+            color: #4adf7a;
+        }
+
+        .status-ok .icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+        .status-ok p { font-size: 0.95rem; line-height: 1.6; color: #a0d8b0; }
+        .status-ok strong { color: #4adf7a; }
+
+        .error-msg {
+            padding: 1rem;
+            background: rgba(200, 60, 60, 0.1);
+            border: 1px solid rgba(200, 60, 60, 0.3);
+            border-radius: 6px;
+            color: #e08080;
+            margin: 1.5rem 0;
+            font-size: 0.9rem;
+        }
+
+        .ip-display {
+            font-size: 0.75rem;
+            color: #555;
+            margin-top: 1.5rem;
+        }
+
+        .renew-box {
+            background: rgba(30, 30, 45, 0.8);
+            border: 2px solid rgba(60, 140, 180, 0.4);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .renew-box .icon { font-size: 2rem; margin-bottom: 0.8rem; color: #5bc0de; }
+
+        .renew-box p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #a0b8d0;
+            margin-bottom: 1rem;
+        }
+
+        .renew-box strong { color: #7fd8f0; }
+
+        .renew-status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            padding: 0.8rem;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .renew-status.success {
+            display: block;
+            background: rgba(60, 200, 100, 0.1);
+            border: 1px solid rgba(60, 200, 100, 0.3);
+            color: #4adf7a;
+        }
+
+        .renew-status.error {
+            display: block;
+            background: rgba(200, 60, 60, 0.1);
+            border: 1px solid rgba(200, 60, 60, 0.3);
+            color: #e08080;
+        }
+
+        .grecaptcha-badge { visibility: hidden; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Elysius RP</div>
+        <div class="subtitle">Portal de Libera&ccedil;&atilde;o de Acesso</div>
+
+        {% if already %}
+        <div class="status-ok">
+            <div class="icon">&#x2714;</div>
+            <p><strong>Seu IP j&aacute; est&aacute; liberado!</strong><br>Voc&ecirc; j&aacute; pode conectar no servidor FiveM.</p>
+        </div>
+
+        {% elif renew and recaptcha_key %}
+        <div class="renew-box">
+            <div class="icon">&#x1F504;</div>
+            <p>
+                Ol&aacute; <strong>{{ discord_name }}</strong>!<br>
+                Seu IP mudou desde a &uacute;ltima vez.<br>
+                Clique no bot&atilde;o abaixo para atualizar automaticamente.
+            </p>
+
+            <button class="btn" id="renewBtn" type="button">Atualizar meu IP</button>
+
+            <div class="renew-status" id="renewStatus"></div>
+        </div>
+
+        {% elif error == 'rate_limit' %}
+        <div class="error-msg">
+            Muitas solicita&ccedil;&otilde;es. Aguarde alguns minutos e tente novamente.
+        </div>
+
+        {% elif code %}
+        <div class="code-box">
+            <div class="code-label">Seu c&oacute;digo</div>
+            <div class="code" id="code">{{ code }}</div>
+            <div class="timer" id="timer"></div>
+        </div>
+
+        <button class="btn" id="copyBtn" onclick="copyCode()">Copiar C&oacute;digo</button>
+
+        <div class="instructions">
+            <h3>Como liberar seu acesso</h3>
+            <ol>
+                <li>Copie o c&oacute;digo acima</li>
+                <li>Acesse nosso <strong>Discord</strong></li>
+                <li>V&aacute; ao canal <strong>#liberar-ip</strong></li>
+                <li>Envie o c&oacute;digo no chat</li>
+                <li>Aguarde a confirma&ccedil;&atilde;o do bot</li>
+                <li>Conecte no servidor FiveM!</li>
+            </ol>
+        </div>
+        {% endif %}
+
+        <div class="ip-display">{{ ip }}</div>
+    </div>
+
+    {% if code %}
+    <script>
+        var ttl = {{ ttl }};
+        var remaining = ttl;
+        var timerEl = document.getElementById('timer');
+
+        function updateTimer() {
+            if (remaining <= 0) {
+                timerEl.textContent = 'Codigo expirado - recarregue a pagina';
+                timerEl.classList.add('expired');
+                setTimeout(function() { location.reload(); }, 2000);
+                return;
+            }
+            var m = Math.floor(remaining / 60);
+            var s = remaining % 60;
+            timerEl.textContent = 'Expira em ' + m + ':' + (s < 10 ? '0' : '') + s;
+            remaining--;
+            setTimeout(updateTimer, 1000);
+        }
+        updateTimer();
+
+        function copyCode() {
+            var code = document.getElementById('code').textContent;
+            navigator.clipboard.writeText(code).then(function() {
+                var btn = document.getElementById('copyBtn');
+                btn.textContent = 'Copiado!';
+                btn.classList.add('copied');
+                setTimeout(function() {
+                    btn.textContent = 'Copiar Codigo';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+    {% endif %}
+
+    {% if renew and recaptcha_key %}
+    <script>
+        var siteKey = '{{ recaptcha_key }}';
+
+        document.getElementById('renewBtn').addEventListener('click', function() {
+            var btn = this;
+            var statusEl = document.getElementById('renewStatus');
+            btn.disabled = true;
+            btn.textContent = 'Verificando...';
+            statusEl.className = 'renew-status';
+            statusEl.style.display = 'none';
+
+            grecaptcha.ready(function() {
+                grecaptcha.execute(siteKey, {action: 'renew_ip'}).then(function(token) {
+                    btn.textContent = 'Atualizando...';
+
+                    fetch('/renew', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({recaptcha_token: token}),
+                    })
+                    .then(function(resp) { return resp.json(); })
+                    .then(function(data) {
+                        if (data.ok) {
+                            statusEl.textContent = 'IP atualizado com sucesso! Voce ja pode conectar.';
+                            statusEl.className = 'renew-status success';
+                            statusEl.style.display = 'block';
+                            btn.textContent = 'Atualizado!';
+                            setTimeout(function() { location.reload(); }, 2000);
+                        } else {
+                            statusEl.textContent = data.error || 'Erro desconhecido.';
+                            statusEl.className = 'renew-status error';
+                            statusEl.style.display = 'block';
+                            btn.disabled = false;
+                            btn.textContent = 'Atualizar meu IP';
+                        }
+                    })
+                    .catch(function() {
+                        statusEl.textContent = 'Erro de conexao. Tente novamente.';
+                        statusEl.className = 'renew-status error';
+                        statusEl.style.display = 'block';
+                        btn.disabled = false;
+                        btn.textContent = 'Atualizar meu IP';
+                    });
+                });
+            });
+        });
+    </script>
+    {% endif %}
+</body>
+</html>
