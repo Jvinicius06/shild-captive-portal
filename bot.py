@@ -46,7 +46,10 @@ def _log_webhook(title: str, description: str, color: int = 0x00FF00):
     req = urllib.request.Request(
         config.LOG_WEBHOOK,
         data=payload.encode(),
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "WhitelistPortal/1.0",
+        },
         method="POST",
     )
     try:
