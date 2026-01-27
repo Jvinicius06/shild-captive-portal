@@ -21,6 +21,8 @@ TRUSTED_PROXIES = [
     p.strip() for p in os.getenv("TRUSTED_PROXIES", "127.0.0.1").split(",") if p.strip()
 ]
 
+PROXY_FIX_X_FOR = int(os.getenv("PROXY_FIX_X_FOR", "1"))
+
 LOG_WEBHOOK = os.getenv("LOG_WEBHOOK", "")
 
 RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", "")

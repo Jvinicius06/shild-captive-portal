@@ -7,6 +7,7 @@ import urllib.request
 import urllib.parse
 
 from flask import Flask, jsonify, make_response, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 import firewall
@@ -14,6 +15,13 @@ import firewall
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=config.PROXY_FIX_X_FOR,
+    x_proto=1,
+    x_host=1,
+    x_prefix=1,
+)
 
 _redis = None
 
@@ -28,10 +36,7 @@ def init(redis_client):
 
 
 def _get_real_ip() -> str:
-    if request.remote_addr in config.TRUSTED_PROXIES:
-        forwarded = request.headers.get("X-Forwarded-For", "")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+    """Return the real client IP. ProxyFix already resolves X-Forwarded-For."""
     return request.remote_addr
 
 
