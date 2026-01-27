@@ -1,0 +1,15 @@
+[Unit]
+Description=Whitelist Firewall Agent (ipset + iptables)
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/joao/fx-server-elysius/base-script/services/whitelist-portal
+ExecStart=/usr/bin/python3 /home/joao/fx-server-elysius/base-script/services/whitelist-portal/firewall_agent.py
+EnvironmentFile=/home/joao/fx-server-elysius/base-script/services/whitelist-portal/.env
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

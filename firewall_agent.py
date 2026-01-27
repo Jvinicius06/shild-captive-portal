@@ -32,6 +32,7 @@ log = logging.getLogger("firewall_agent")
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 IPSET_NAME = os.getenv("IPSET_NAME", "jogadores_permitidos")
+PROTECTED_PORTS = os.getenv("PROTECTED_PORTS", "30120")
 QUEUE_KEY = "whitelist:firewall_queue"
 ACTIVE_PREFIX = "whitelist:active:"
 
@@ -46,13 +47,29 @@ def _validate_ip(ip: str) -> str:
     return str(ipaddress.ip_address(ip))
 
 
-def setup_ipset() -> None:
-    """Create the ipset if it does not already exist."""
-    result = _run(["ipset", "create", IPSET_NAME, "hash:ip", "-exist"])
-    if result.returncode != 0:
-        log.error("ipset create failed: %s", result.stderr.strip())
+def setup_firewall() -> None:
+    """Run setup_firewall.sh to create ipset + iptables rules."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "setup_firewall.sh")
+    if not os.path.isfile(script):
+        log.error("setup_firewall.sh not found at %s", script)
         sys.exit(1)
-    log.info("ipset '%s' ready", IPSET_NAME)
+
+    log.info("Running setup_firewall.sh ...")
+    result = subprocess.run(
+        ["bash", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env={**os.environ, "IPSET_NAME": IPSET_NAME, "PROTECTED_PORTS": PROTECTED_PORTS},
+    )
+    if result.returncode != 0:
+        log.error("setup_firewall.sh failed:\n%s", result.stderr.strip())
+        sys.exit(1)
+
+    for line in result.stdout.strip().splitlines():
+        log.info("[setup] %s", line)
+
+    log.info("Firewall rules applied successfully")
 
 
 def restore_ips(r: redis_lib.Redis) -> int:
@@ -121,7 +138,7 @@ def main():
     r.ping()
     log.info("Redis connected")
 
-    setup_ipset()
+    setup_firewall()
 
     restored = restore_ips(r)
     log.info("Restored %d IPs from Redis into ipset", restored)
