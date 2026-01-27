@@ -130,7 +130,7 @@ async def on_message(message: discord.Message):
 
     embed = discord.Embed(
         title="IP Liberado!",
-        description=f"O IP `{ip}` foi liberado com sucesso.\nVoce ja pode conectar no servidor FiveM.",
+        description=f"Seu IP foi liberado com sucesso.\nVoce ja pode conectar no servidor FiveM.\n\nCaso nao consiga acessar a cidade, entre no portal: {config.PORTAL_URL}",
         color=0x00FF00,
     )
     embed.set_footer(text=f"Liberado por {message.author}")

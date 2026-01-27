@@ -23,6 +23,8 @@ TRUSTED_PROXIES = [
 
 PROXY_FIX_X_FOR = int(os.getenv("PROXY_FIX_X_FOR", "1"))
 
+PORTAL_URL = os.getenv("PORTAL_URL", "http://localhost:5000")
+
 LOG_WEBHOOK = os.getenv("LOG_WEBHOOK", "")
 
 RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", "")
