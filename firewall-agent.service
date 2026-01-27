@@ -9,7 +9,8 @@ WorkingDirectory=/root/shild-captive-portal
 ExecStart=/usr/bin/python3 /root/shild-captive-portal/firewall_agent.py
 EnvironmentFile=/root/shild-captive-portal/.env
 Restart=always
-RestartSec=5
+RestartSec=10
+StartLimitIntervalSec=0
 
 [Install]
 WantedBy=multi-user.target
