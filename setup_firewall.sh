@@ -34,14 +34,18 @@ fi
 sudo iptables -A FILTRO_CIDADE -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FILTRO_CIDADE -i lo -j ACCEPT
 
-# B. PORTA DO JOGO (Prioridade Total)
+# B. PORTAS DO JOGO (Prioridade Total)
 # Se o IP está no IPSet, ACEITA e ignora os limites abaixo.
-sudo iptables -A FILTRO_CIDADE -p tcp --dport "$GAME_PORT" -m set --match-set "$IPSET_NAME" src -j ACCEPT
-sudo iptables -A FILTRO_CIDADE -p udp --dport "$GAME_PORT" -m set --match-set "$IPSET_NAME" src -j ACCEPT
-
-# Se NÃO está no IPSet e tentou a porta do jogo -> DROP
-sudo iptables -A FILTRO_CIDADE -p tcp --dport "$GAME_PORT" -j DROP
-sudo iptables -A FILTRO_CIDADE -p udp --dport "$GAME_PORT" -j DROP
+IFS=',' read -ra GAME_PORTS <<< "$GAME_PORT"
+for PORT in "${GAME_PORTS[@]}"; do
+    PORT=$(echo "$PORT" | tr -d ' ')
+    echo "[*] Protegendo porta do jogo: $PORT"
+    sudo iptables -A FILTRO_CIDADE -p tcp --dport "$PORT" -m set --match-set "$IPSET_NAME" src -j ACCEPT
+    sudo iptables -A FILTRO_CIDADE -p udp --dport "$PORT" -m set --match-set "$IPSET_NAME" src -j ACCEPT
+    # Se NÃO está no IPSet e tentou a porta do jogo -> DROP
+    sudo iptables -A FILTRO_CIDADE -p tcp --dport "$PORT" -j DROP
+    sudo iptables -A FILTRO_CIDADE -p udp --dport "$PORT" -j DROP
+done
 
 # C. LIMITE GLOBAL DE 50 CONEXÕES (Para todo o resto)
 # Protege 80, 443, 3000, 3001, 9090, 4445 e SSH contra excesso de sockets.
