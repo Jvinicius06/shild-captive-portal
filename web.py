@@ -170,11 +170,30 @@ def index():
         return render_template("index.html", code=None, already=True, ip=ip, ttl=0,
                                renew=False, recaptcha_key="")
 
-    # Session cookie exists but IP changed → show auto-renewal with reCAPTCHA
-    if session and config.RECAPTCHA_SITE_KEY:
-        return render_template("index.html", code=None, already=False, ip=ip, ttl=0,
-                               renew=True, recaptcha_key=config.RECAPTCHA_SITE_KEY,
-                               discord_name=session.get("discord_name", ""))
+    # Session cookie exists but IP changed → automatic renewal
+    if session:
+        # Automatically update the IP without requiring user interaction
+        success = _update_session_ip(session, ip)
+        if success:
+            log.info("Auto-renewed IP: %s -> %s (discord: %s)", session.get("ip"), ip, session.get("discord_name"))
+            # Refresh the session cookie TTL
+            resp = make_response(
+                render_template("index.html", code=None, already=True, ip=ip, ttl=0,
+                                renew=False, recaptcha_key="", auto_renewed=True,
+                                discord_name=session.get("discord_name", ""))
+            )
+            resp.set_cookie(
+                SESSION_COOKIE, session["_token"],
+                max_age=config.SESSION_TTL, httponly=True, samesite="Lax",
+            )
+            return resp
+        else:
+            # If auto-renewal failed, show manual renewal option with reCAPTCHA
+            log.warning("Auto-renewal failed for session %s, showing manual renewal", session.get("discord_name"))
+            if config.RECAPTCHA_SITE_KEY:
+                return render_template("index.html", code=None, already=False, ip=ip, ttl=0,
+                                       renew=True, recaptcha_key=config.RECAPTCHA_SITE_KEY,
+                                       discord_name=session.get("discord_name", ""))
 
     # Normal flow: generate a new code
     if not _check_rate_limit(ip):

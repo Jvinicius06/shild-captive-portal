@@ -214,7 +214,11 @@
         {% if already %}
         <div class="status-ok">
             <div class="icon">&#x2714;</div>
+            {% if auto_renewed is defined and auto_renewed %}
+            <p><strong>IP atualizado automaticamente!</strong><br>Ol&aacute; {{ discord_name if discord_name is defined else '' }}! Seu novo IP foi liberado.<br>Voc&ecirc; j&aacute; pode conectar no servidor FiveM.</p>
+            {% else %}
             <p><strong>Seu IP j&aacute; est&aacute; liberado!</strong><br>Voc&ecirc; j&aacute; pode conectar no servidor FiveM.</p>
+            {% endif %}
         </div>
 
         {% elif renew and recaptcha_key %}

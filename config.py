@@ -31,4 +31,4 @@ RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", "")
 RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", "")
 RECAPTCHA_SCORE_THRESHOLD = float(os.getenv("RECAPTCHA_SCORE_THRESHOLD", "0.5"))
 
-SESSION_TTL = int(os.getenv("SESSION_TTL", str(30 * 24 * 3600)))  # 30 days
+SESSION_TTL = int(os.getenv("SESSION_TTL", str(15 * 24 * 3600)))  # 15 days

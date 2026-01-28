@@ -129,7 +129,8 @@ async def on_message(message: discord.Message):
     })
     _redis.setex(f"whitelist:session:{session_token}", config.SESSION_TTL, session_data)
     # Store pending cookie so the web server can set it on next page load
-    _redis.setex(f"whitelist:pending_session:{ip}", config.CODE_TTL, session_token)
+    # Use SESSION_TTL so user can get the cookie anytime within session validity
+    _redis.setex(f"whitelist:pending_session:{ip}", config.SESSION_TTL, session_token)
 
     embed = discord.Embed(
         title="IP Liberado!",
