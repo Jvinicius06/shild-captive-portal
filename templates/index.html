@@ -204,6 +204,67 @@
         }
 
         .grecaptcha-badge { visibility: hidden; }
+
+        .connect-box {
+            margin-top: 1.5rem;
+            padding: 1.2rem;
+            background: rgba(20, 20, 30, 0.6);
+            border-radius: 8px;
+            border: 1px solid rgba(180, 140, 60, 0.3);
+        }
+
+        .connect-box .label {
+            font-size: 0.75rem;
+            color: #8a7e6b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .connect-box .hint {
+            font-size: 0.75rem;
+            color: #6a6a7a;
+            margin-bottom: 0.8rem;
+        }
+
+        .connect-command {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(30, 30, 45, 0.8);
+            border: 1px solid rgba(180, 140, 60, 0.4);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+        }
+
+        .connect-command code {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            color: #f0d070;
+            letter-spacing: 1px;
+        }
+
+        .connect-command .copy-btn {
+            background: rgba(180, 140, 60, 0.2);
+            border: 1px solid rgba(180, 140, 60, 0.4);
+            color: #c9a84c;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .connect-command .copy-btn:hover {
+            background: rgba(180, 140, 60, 0.3);
+        }
+
+        .connect-command .copy-btn.copied {
+            background: rgba(60, 200, 100, 0.2);
+            border-color: rgba(60, 200, 100, 0.4);
+            color: #4adf7a;
+        }
     </style>
 </head>
 <body>
@@ -219,6 +280,15 @@
             {% else %}
             <p><strong>Seu IP j&aacute; est&aacute; liberado!</strong><br>Voc&ecirc; j&aacute; pode conectar no servidor FiveM.</p>
             {% endif %}
+        </div>
+
+        <div class="connect-box">
+            <div class="label">Comando de Conex&atilde;o</div>
+            <div class="hint">Abra o jogo, pressione <strong>F8</strong> e cole o comando abaixo:</div>
+            <div class="connect-command">
+                <code id="connectCmd">connect play.elysiusrp.com.br</code>
+                <button class="copy-btn" id="copyConnectBtn" onclick="copyConnect()">Copiar</button>
+            </div>
         </div>
 
         {% elif renew and recaptcha_key %}
@@ -348,6 +418,23 @@
                 });
             });
         });
+    </script>
+    {% endif %}
+
+    {% if already %}
+    <script>
+        function copyConnect() {
+            var cmd = document.getElementById('connectCmd').textContent;
+            navigator.clipboard.writeText(cmd).then(function() {
+                var btn = document.getElementById('copyConnectBtn');
+                btn.textContent = 'Copiado!';
+                btn.classList.add('copied');
+                setTimeout(function() {
+                    btn.textContent = 'Copiar';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
     </script>
     {% endif %}
 </body>
