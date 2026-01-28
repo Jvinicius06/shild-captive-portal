@@ -32,3 +32,5 @@ RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", "")
 RECAPTCHA_SCORE_THRESHOLD = float(os.getenv("RECAPTCHA_SCORE_THRESHOLD", "0.5"))
 
 SESSION_TTL = int(os.getenv("SESSION_TTL", str(15 * 24 * 3600)))  # 15 days
+SESSION_WARNING_THRESHOLD = int(os.getenv("SESSION_WARNING_THRESHOLD", str(2 * 24 * 3600)))  # 2 days before expiry
+SESSION_CHECK_INTERVAL = int(os.getenv("SESSION_CHECK_INTERVAL", "3600"))  # Check every 1 hour

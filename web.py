@@ -156,6 +156,8 @@ def index():
         pending_token = _redis.get(f"whitelist:pending_session:{ip}")
         if pending_token:
             _redis.delete(f"whitelist:pending_session:{ip}")
+            # Renew session TTL when user visits
+            _redis.expire(f"whitelist:session:{pending_token}", config.SESSION_TTL)
             resp = make_response(
                 render_template("index.html", code=None, already=True, ip=ip, ttl=0,
                                 renew=False, recaptcha_key="")
@@ -166,7 +168,22 @@ def index():
             )
             return resp
 
-        # Also set cookie if session exists but cookie matches this IP
+        # Session exists and IP matches → renew session TTL on each visit
+        if session:
+            token = session["_token"]
+            # Renew session and cookie TTL
+            _redis.expire(f"whitelist:session:{token}", config.SESSION_TTL)
+            log.info("Session renewed for %s (IP: %s)", session.get("discord_name"), ip)
+            resp = make_response(
+                render_template("index.html", code=None, already=True, ip=ip, ttl=0,
+                                renew=False, recaptcha_key="")
+            )
+            resp.set_cookie(
+                SESSION_COOKIE, token,
+                max_age=config.SESSION_TTL, httponly=True, samesite="Lax",
+            )
+            return resp
+
         return render_template("index.html", code=None, already=True, ip=ip, ttl=0,
                                renew=False, recaptcha_key="")
 

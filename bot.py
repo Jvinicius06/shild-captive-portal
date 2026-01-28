@@ -6,6 +6,7 @@ import time
 
 import discord
 from discord import app_commands
+from discord.ext import tasks
 
 import config
 import firewall
@@ -68,6 +69,90 @@ async def on_ready():
     else:
         await tree.sync()
     log.info("Slash commands synced")
+
+    # Start the session expiry checker
+    if not check_expiring_sessions.is_running():
+        check_expiring_sessions.start()
+        log.info("Session expiry checker started (interval: %ds)", config.SESSION_CHECK_INTERVAL)
+
+
+@tasks.loop(seconds=config.SESSION_CHECK_INTERVAL)
+async def check_expiring_sessions():
+    """Check for sessions about to expire and send DM warnings."""
+    try:
+        warned_key = "whitelist:warned_sessions"
+
+        # Scan all session keys
+        for key in _redis.scan_iter("whitelist:session:*"):
+            ttl = _redis.ttl(key)
+            if ttl <= 0:
+                continue
+
+            # Check if TTL is within warning threshold
+            if ttl <= config.SESSION_WARNING_THRESHOLD:
+                token = key.split(":")[-1]
+
+                # Check if we already warned this session
+                if _redis.sismember(warned_key, token):
+                    continue
+
+                raw = _redis.get(key)
+                if not raw:
+                    continue
+
+                session_data = json.loads(raw)
+                discord_id = session_data.get("discord_id")
+                discord_name = session_data.get("discord_name")
+                ip = session_data.get("ip")
+
+                if not discord_id:
+                    continue
+
+                # Calculate days remaining
+                days_remaining = ttl // 86400
+                hours_remaining = (ttl % 86400) // 3600
+
+                # Try to send DM
+                try:
+                    user = await client.fetch_user(int(discord_id))
+                    if user:
+                        embed = discord.Embed(
+                            title="⚠️ Acesso prestes a expirar!",
+                            description=(
+                                f"Seu acesso ao servidor **Elysius RP** vai expirar em "
+                                f"**{days_remaining} dia(s) e {hours_remaining} hora(s)**.\n\n"
+                                f"Para renovar, basta acessar o portal:\n{config.PORTAL_URL}\n\n"
+                                f"Se você estiver jogando quando expirar, será desconectado."
+                            ),
+                            color=0xFFA500,
+                        )
+                        embed.set_footer(text="Elysius RP | Sistema de Whitelist")
+                        await user.send(embed=embed)
+
+                        # Mark as warned (expires when session expires)
+                        _redis.sadd(warned_key, token)
+                        _redis.expire(warned_key, config.SESSION_TTL)
+
+                        log.info("Sent expiry warning to %s (TTL: %d days %d hours)",
+                                discord_name, days_remaining, hours_remaining)
+
+                        _log_webhook(
+                            "Aviso de Expiração Enviado",
+                            f"**Discord:** {discord_name}\n**IP:** `{ip}`\n**Tempo restante:** {days_remaining}d {hours_remaining}h",
+                            color=0xFFA500
+                        )
+                except discord.Forbidden:
+                    log.warning("Cannot send DM to %s (DMs disabled)", discord_name)
+                except Exception as e:
+                    log.error("Failed to send warning to %s: %s", discord_name, e)
+
+    except Exception as e:
+        log.error("Error in check_expiring_sessions: %s", e)
+
+
+@check_expiring_sessions.before_loop
+async def before_check_expiring_sessions():
+    await client.wait_until_ready()
 
 
 @client.event
