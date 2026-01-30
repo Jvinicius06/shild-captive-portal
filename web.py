@@ -270,3 +270,202 @@ def status():
     ip = request.args.get("ip", _get_real_ip())
     whitelisted = firewall.is_whitelisted(ip)
     return jsonify({"ip": ip, "whitelisted": whitelisted})
+
+
+# ============================================================
+# API Endpoints para Cliente Desktop
+# ============================================================
+
+@app.route("/api/request-code", methods=["POST"])
+def api_request_code():
+    """
+    Gera um código de whitelist para o cliente desktop.
+    Retorna o código e o IP detectado.
+    """
+    ip = _get_real_ip()
+
+    # Verificar se já está liberado
+    if firewall.is_whitelisted(ip):
+        # Verificar se tem sessão pendente
+        pending_token = _redis.get(f"whitelist:pending_session:{ip}")
+        if pending_token:
+            return jsonify({
+                "ok": True,
+                "already_whitelisted": True,
+                "ip": ip,
+                "session_token": pending_token,
+            })
+        return jsonify({
+            "ok": True,
+            "already_whitelisted": True,
+            "ip": ip,
+            "message": "IP ja esta liberado",
+        })
+
+    # Rate limit
+    if not _check_rate_limit(ip):
+        return jsonify({
+            "ok": False,
+            "error": "rate_limit",
+            "message": "Muitas tentativas. Aguarde 5 minutos.",
+        }), 429
+
+    # Gerar código
+    code = _generate_code()
+    data = json.dumps({"ip": ip, "created_at": time.time()})
+    _redis.setex(f"whitelist:code:{code}", config.CODE_TTL, data)
+
+    log.info("[API] Code %s generated for IP %s", code, ip)
+
+    return jsonify({
+        "ok": True,
+        "code": code,
+        "ip": ip,
+        "ttl": config.CODE_TTL,
+        "message": f"Digite o codigo {code} no canal do Discord",
+    })
+
+
+@app.route("/api/check-code", methods=["POST"])
+def api_check_code():
+    """
+    Verifica se um código foi validado no Discord.
+    Retorna o session_token se validado.
+    """
+    ip = _get_real_ip()
+
+    # Verificar se está liberado
+    if not firewall.is_whitelisted(ip):
+        return jsonify({
+            "ok": False,
+            "validated": False,
+            "message": "IP ainda nao liberado. Digite o codigo no Discord.",
+        })
+
+    # Buscar session token pendente
+    pending_token = _redis.get(f"whitelist:pending_session:{ip}")
+    if pending_token:
+        # Remover da lista de pendentes
+        _redis.delete(f"whitelist:pending_session:{ip}")
+
+        log.info("[API] Session token delivered for IP %s", ip)
+
+        return jsonify({
+            "ok": True,
+            "validated": True,
+            "session_token": pending_token,
+            "session_ttl": config.SESSION_TTL,
+            "message": "Codigo validado! Sessao criada.",
+        })
+
+    # IP liberado mas sem token pendente (validação antiga)
+    return jsonify({
+        "ok": True,
+        "validated": True,
+        "session_token": None,
+        "message": "IP liberado, mas sessao ja foi coletada anteriormente.",
+    })
+
+
+@app.route("/api/refresh-session", methods=["POST"])
+def api_refresh_session():
+    """
+    Renova a sessão usando o token.
+    Atualiza o IP se necessário.
+    """
+    ip = _get_real_ip()
+
+    # Obter token do header ou body
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        data = request.get_json(silent=True) or {}
+        token = data.get("session_token")
+
+    if not token:
+        return jsonify({
+            "ok": False,
+            "error": "missing_token",
+            "message": "Token de sessao nao fornecido.",
+        }), 400
+
+    # Verificar sessão
+    raw = _redis.get(f"whitelist:session:{token}")
+    if not raw:
+        return jsonify({
+            "ok": False,
+            "error": "invalid_session",
+            "message": "Sessao invalida ou expirada. Faca o processo novamente.",
+        }), 401
+
+    session_data = json.loads(raw)
+    session_data["_token"] = token
+    old_ip = session_data.get("ip")
+
+    # Atualizar IP se mudou
+    if old_ip != ip:
+        success = _update_session_ip(session_data, ip)
+        if not success:
+            return jsonify({
+                "ok": False,
+                "error": "update_failed",
+                "message": "Falha ao atualizar IP.",
+            }), 500
+
+        log.info("[API] IP updated: %s -> %s (discord: %s)", old_ip, ip, session_data.get("discord_name"))
+    else:
+        # Apenas renovar TTL
+        _redis.expire(f"whitelist:session:{token}", config.SESSION_TTL)
+
+    ttl = _redis.ttl(f"whitelist:session:{token}")
+
+    return jsonify({
+        "ok": True,
+        "ip": ip,
+        "old_ip": old_ip,
+        "ip_changed": old_ip != ip,
+        "session_ttl": ttl,
+        "discord_name": session_data.get("discord_name"),
+        "message": "Sessao renovada com sucesso.",
+    })
+
+
+@app.route("/api/session-info", methods=["GET"])
+def api_session_info():
+    """
+    Retorna informações sobre a sessão atual.
+    """
+    ip = _get_real_ip()
+
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        token = request.args.get("token")
+
+    if not token:
+        return jsonify({
+            "ok": False,
+            "error": "missing_token",
+        }), 400
+
+    raw = _redis.get(f"whitelist:session:{token}")
+    if not raw:
+        return jsonify({
+            "ok": False,
+            "error": "invalid_session",
+            "valid": False,
+        }), 401
+
+    session_data = json.loads(raw)
+    ttl = _redis.ttl(f"whitelist:session:{token}")
+    whitelisted = firewall.is_whitelisted(ip)
+
+    return jsonify({
+        "ok": True,
+        "valid": True,
+        "current_ip": ip,
+        "session_ip": session_data.get("ip"),
+        "ip_match": session_data.get("ip") == ip,
+        "whitelisted": whitelisted,
+        "discord_name": session_data.get("discord_name"),
+        "session_ttl": ttl,
+        "session_ttl_days": ttl // 86400 if ttl > 0 else 0,
+    })

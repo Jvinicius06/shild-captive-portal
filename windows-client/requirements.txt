@@ -1,0 +1,7 @@
+# Elysius Whitelist Client - Windows
+# Instalar: pip install -r requirements.txt
+
+pystray>=0.19.5
+Pillow>=10.0.0
+requests>=2.31.0
+pyinstaller>=6.0.0
