@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Elysius Whitelist Client - Windows System Tray Application
+Elysius Shield Client - Windows System Tray Application
 
 Faz todo o processo de whitelist automaticamente:
 1. Gera código de 4 dígitos
@@ -25,13 +25,13 @@ from PIL import Image, ImageDraw, ImageFont
 from pystray import MenuItem as item
 
 # Configuração
-APP_NAME = "Elysius Whitelist"
-CONFIG_FILE = Path(os.getenv("APPDATA", ".")) / "ElysiusWhitelist" / "config.json"
-LOG_FILE = Path(os.getenv("APPDATA", ".")) / "ElysiusWhitelist" / "client.log"
+APP_NAME = "Elysius Shield"
+CONFIG_FILE = Path(os.getenv("APPDATA", ".")) / "ElysiusShield" / "config.json"
+LOG_FILE = Path(os.getenv("APPDATA", ".")) / "ElysiusShield" / "client.log"
 
 # Valores padrão
 DEFAULT_CONFIG = {
-    "portal_url": "https://whitelist.elysiusrp.com.br",
+    "portal_url": "https://shield.elysiusrp.com.br",
     "refresh_interval": 60,  # segundos
     "session_token": "",
     "discord_name": "",
@@ -203,16 +203,19 @@ def api_request(endpoint: str, method: str = "GET", data: dict = None) -> dict:
         return {"ok": False, "error": "invalid_response", "message": str(e)}
 
 
-def request_code() -> tuple[bool, str, str]:
+def request_code(force: bool = False) -> tuple[bool, str, str]:
     """
     Solicita um novo código de whitelist.
     Retorna: (sucesso, código ou mensagem, ip)
+
+    Args:
+        force: Se True, força geração de novo código mesmo se IP já liberado
     """
     global _pending_code
 
     update_icon_status("Aguardando codigo", "Solicitando...", "...")
 
-    result = api_request("/api/request-code", "POST")
+    result = api_request("/api/request-code", "POST", {"force": force})
 
     if not result.get("ok"):
         error = result.get("error", "unknown")
@@ -231,10 +234,13 @@ def request_code() -> tuple[bool, str, str]:
         if result.get("session_token"):
             _config["session_token"] = result["session_token"]
             _config["last_ip"] = ip
+            if result.get("discord_name"):
+                _config["discord_name"] = result["discord_name"]
             save_config()
-            return True, "Ja liberado! Sessao recuperada.", ip
+            return True, "Ja liberado! Sessao criada.", ip
 
-        return True, "IP ja esta liberado.", ip
+        # Sem token - sugerir forçar novo código
+        return True, "IP liberado mas sem sessao. Clique em 'Forcar Novo Codigo'.", ip
 
     # Código gerado
     code = result.get("code", "")
@@ -342,7 +348,7 @@ def code_check_loop():
             _pending_code = None
             _code_check_active = False
             update_icon_status("Conectado", msg)
-            show_notification("Whitelist Ativada!", msg)
+            show_notification("Shield Ativado!", msg)
             log.info("Validacao concluida: %s", msg)
             return
 
@@ -402,20 +408,36 @@ def refresh_loop():
 
 def on_get_code(icon, item):
     """Solicita um novo código de whitelist."""
+    _do_get_code(force=False)
+
+
+def on_force_code(icon, item):
+    """Força geração de novo código mesmo se IP já liberado."""
+    _do_get_code(force=True)
+
+
+def _do_get_code(force: bool = False):
+    """Executa a solicitação de código."""
     def do_request():
         global _pending_code
 
-        success, result, ip = request_code()
+        success, result, ip = request_code(force=force)
 
         if not success:
             update_icon_status("Erro", result)
             show_notification("Erro", result)
             return
 
-        # Se já está liberado
-        if "liberado" in result.lower() or "recuperada" in result.lower():
+        # Se já está liberado e sessão foi criada
+        if "liberado" in result.lower() and "sessao" in result.lower():
             update_icon_status("Conectado", result)
-            show_notification("Whitelist", result)
+            show_notification("Shield", result)
+            return
+
+        # Se precisa forçar código
+        if "forcar" in result.lower():
+            update_icon_status("Desconectado", result)
+            show_notification("Shield", result)
             return
 
         # Código gerado - mostrar e iniciar verificação
@@ -425,7 +447,7 @@ def on_get_code(icon, item):
         update_icon_status("Aguardando codigo", f"Digite {code} no Discord", code[:2])
         show_notification(
             f"Codigo: {code}",
-            f"Digite {code} no canal de whitelist do Discord.\nSeu IP: {ip}"
+            f"Digite {code} no canal de shield do Discord.\nSeu IP: {ip}"
         )
 
         # Iniciar thread de verificação
@@ -471,7 +493,7 @@ def on_check_status(icon, item):
 
 def on_open_portal(icon, item):
     """Abre o portal no navegador."""
-    url = _config.get("portal_url", "https://whitelist.elysiusrp.com.br")
+    url = _config.get("portal_url", "https://shield.elysiusrp.com.br")
     webbrowser.open(url)
 
 
@@ -504,20 +526,28 @@ def on_exit(icon, item):
     icon.stop()
 
 
-def get_status_text():
-    """Retorna o texto de status para o menu."""
-    parts = [f"Status: {_status}"]
+def get_status_line():
+    """Retorna a linha de status principal."""
+    return f"Status: {_status}"
 
-    if _status_detail:
-        parts.append(_status_detail)
 
+def get_detail_line():
+    """Retorna detalhes do status."""
+    return _status_detail if _status_detail else ""
+
+
+def get_refresh_line():
+    """Retorna a linha de ultima renovacao."""
     if _last_refresh:
-        parts.append(f"Ultima renovacao: {_last_refresh.strftime('%H:%M:%S')}")
+        return f"Renovado: {_last_refresh.strftime('%H:%M:%S')}"
+    return ""
 
+
+def get_discord_line():
+    """Retorna a linha do Discord."""
     if _config.get("discord_name"):
-        parts.append(f"Discord: {_config['discord_name']}")
-
-    return "\n".join(parts)
+        return f"Discord: {_config['discord_name']}"
+    return ""
 
 
 def create_menu():
@@ -525,17 +555,21 @@ def create_menu():
     has_session = bool(_config.get("session_token"))
 
     return pystray.Menu(
-        item(lambda text: get_status_text(), None, enabled=False),
-        item("─" * 25, None, enabled=False),
-        item("Obter Novo Codigo", on_get_code, visible=lambda item: not _code_check_active),
+        item(lambda text: get_status_line(), None, enabled=False),
+        item(lambda text: get_detail_line(), None, enabled=False, visible=lambda i: bool(get_detail_line())),
+        item(lambda text: get_discord_line(), None, enabled=False, visible=lambda i: bool(get_discord_line())),
+        item(lambda text: get_refresh_line(), None, enabled=False, visible=lambda i: bool(get_refresh_line())),
+        pystray.Menu.SEPARATOR,
+        item("Obter Codigo", on_get_code, visible=lambda item: not _code_check_active),
+        item("Forcar Novo Codigo", on_force_code, visible=lambda item: not _code_check_active),
         item("Renovar Agora", on_refresh_now, visible=lambda item: has_session),
         item("Verificar Status", on_check_status),
         item("Abrir Portal", on_open_portal),
-        item("─" * 25, None, enabled=False),
+        pystray.Menu.SEPARATOR,
         item("Abrir Configuracao", on_open_config),
         item("Ver Log", on_open_log),
         item("Limpar Sessao", on_clear_session, visible=lambda item: has_session),
-        item("─" * 25, None, enabled=False),
+        pystray.Menu.SEPARATOR,
         item("Sair", on_exit),
     )
 

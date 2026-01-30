@@ -281,11 +281,16 @@ def api_request_code():
     """
     Gera um código de whitelist para o cliente desktop.
     Retorna o código e o IP detectado.
+
+    Parâmetros opcionais (JSON body):
+    - force: bool - Força geração de novo código mesmo se IP já liberado
     """
     ip = _get_real_ip()
+    data = request.get_json(silent=True) or {}
+    force_new_code = data.get("force", False)
 
     # Verificar se já está liberado
-    if firewall.is_whitelisted(ip):
+    if firewall.is_whitelisted(ip) and not force_new_code:
         # Verificar se tem sessão pendente
         pending_token = _redis.get(f"whitelist:pending_session:{ip}")
         if pending_token:
@@ -295,11 +300,39 @@ def api_request_code():
                 "ip": ip,
                 "session_token": pending_token,
             })
+
+        # IP liberado mas sem sessão - criar sessão automaticamente
+        # Buscar dados do registro ativo
+        active_raw = _redis.get(f"whitelist:active:{ip}")
+        if active_raw:
+            active_data = json.loads(active_raw)
+            # Criar nova sessão
+            token = "".join(random.choices(string.ascii_letters + string.digits, k=32))
+            session_data = {
+                "discord_id": active_data.get("discord_id", ""),
+                "discord_name": active_data.get("discord_name", "Usuario"),
+                "ip": ip,
+                "created_at": time.time(),
+            }
+            _redis.setex(f"whitelist:session:{token}", config.SESSION_TTL, json.dumps(session_data))
+            log.info("[API] Session created for already whitelisted IP %s (discord: %s)", ip, session_data["discord_name"])
+
+            return jsonify({
+                "ok": True,
+                "already_whitelisted": True,
+                "ip": ip,
+                "session_token": token,
+                "discord_name": session_data["discord_name"],
+                "message": "IP ja liberado. Sessao criada automaticamente.",
+            })
+
+        # Sem dados ativos - retornar que precisa de código
         return jsonify({
             "ok": True,
             "already_whitelisted": True,
             "ip": ip,
-            "message": "IP ja esta liberado",
+            "session_token": None,
+            "message": "IP liberado mas sem dados de sessao. Use force=true para gerar novo codigo.",
         })
 
     # Rate limit

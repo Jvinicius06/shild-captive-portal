@@ -1,6 +1,6 @@
-# Elysius Whitelist Client - Windows
+# Elysius Shield Client - Windows
 
-Aplicativo para gerenciar sua whitelist do servidor Elysius RP automaticamente.
+Aplicativo para gerenciar seu acesso ao servidor Elysius RP automaticamente.
 
 ## Funcionalidades
 
@@ -18,7 +18,7 @@ Aplicativo para gerenciar sua whitelist do servidor Elysius RP automaticamente.
 2. **Clique com botão direito** no ícone
 3. **Clique em "Obter Novo Código"**
 4. Uma notificação aparece com um código de 4 letras (ex: `AB12`)
-5. **Vá ao Discord** e digite esse código no canal de whitelist
+5. **Vá ao Discord** e digite esse código no canal de shield
 6. O programa detecta automaticamente quando validado
 7. **Pronto!** A sessão é salva e renovada automaticamente
 
@@ -53,30 +53,30 @@ Aplicativo para gerenciar sua whitelist do servidor Elysius RP automaticamente.
 ## Instalação
 
 ### Opção 1: Executável Pronto
-1. Baixe o `ElysiusWhitelist.exe`
+1. Baixe o `ElysiusShield.exe`
 2. Execute (não precisa instalar)
 
 ### Opção 2: Compilar do Código
 1. Instale Python 3.10+
 2. Na pasta `windows-client`, execute `build.bat`
-3. O executável estará em `dist\ElysiusWhitelist.exe`
+3. O executável estará em `dist\ElysiusShield.exe`
 
 ## Iniciar com o Windows
 
 1. Pressione `Win + R`
 2. Digite `shell:startup` e pressione Enter
-3. Copie o `ElysiusWhitelist.exe` (ou crie um atalho) para essa pasta
+3. Copie o `ElysiusShield.exe` (ou crie um atalho) para essa pasta
 
 ## Configuração Avançada
 
 O arquivo de configuração fica em:
 ```
-%APPDATA%\ElysiusWhitelist\config.json
+%APPDATA%\ElysiusShield\config.json
 ```
 
 ```json
 {
-  "portal_url": "https://whitelist.elysiusrp.com.br",
+  "portal_url": "https://shield.elysiusrp.com.br",
   "refresh_interval": 60,
   "session_token": "...",
   "discord_name": "Usuario#1234",
@@ -86,7 +86,7 @@ O arquivo de configuração fica em:
 
 | Campo | Descrição | Padrão |
 |-------|-----------|--------|
-| `portal_url` | URL do portal | `https://whitelist.elysiusrp.com.br` |
+| `portal_url` | URL do portal | `https://shield.elysiusrp.com.br` |
 | `refresh_interval` | Segundos entre renovações | `60` |
 | `session_token` | Token (gerenciado automaticamente) | - |
 | `discord_name` | Nome do Discord (salvo automaticamente) | - |
@@ -115,7 +115,7 @@ O arquivo de configuração fica em:
 
 Problemas? Verifique o log em:
 ```
-%APPDATA%\ElysiusWhitelist\client.log
+%APPDATA%\ElysiusShield\client.log
 ```
 
 ## Requisitos

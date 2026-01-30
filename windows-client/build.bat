@@ -1,7 +1,7 @@
 @echo off
 echo.
 echo ========================================================
-echo      Elysius Whitelist Client - Build Script
+echo      Elysius Shield Client - Build Script
 echo ========================================================
 echo.
 
@@ -34,15 +34,15 @@ echo.
 echo [INFO] Compilando executavel (pode demorar)...
 echo.
 
-call pyinstaller --onefile --noconsole --clean --name "ElysiusWhitelist" --icon "icon.ico" --hidden-import pystray._win32 --hidden-import PIL._tkinter_finder --add-data "icon.ico;." --version-file version_info.txt whitelist_client.py
+call pyinstaller --onefile --noconsole --clean --name "ElysiusShield" --icon "icon.ico" --hidden-import pystray._win32 --hidden-import PIL._tkinter_finder --add-data "icon.ico;." --version-file version_info.txt whitelist_client.py
 
-if exist "dist\ElysiusWhitelist.exe" (
+if exist "dist\ElysiusShield.exe" (
     echo.
     echo ========================================================
     echo              BUILD CONCLUIDO COM SUCESSO!
     echo ========================================================
     echo.
-    echo   Arquivo: dist\ElysiusWhitelist.exe
+    echo   Arquivo: dist\ElysiusShield.exe
     explorer dist
 ) else (
     echo.
