@@ -1,3 +1,12 @@
 .env
 __pycache__/
 .venv/
+
+# Windows Client Build
+windows-client/venv/
+windows-client/build/
+windows-client/dist/
+windows-client/*.spec
+windows-client/icon.ico
+windows-client/build_errors.log
+windows-client/test.bat
